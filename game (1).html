@@ -1,0 +1,1594 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retro Kids Arcade Portal</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Cute Rounded Look & Standard High Readability Sans -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Nanum+Pen+Script&family=Gowun+Dodum&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Confetti JS for winning celebration -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Gowun Dodum', 'sans-serif'],
+                        cute: ['Fredoka', 'Gowun Dodum', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'soft-sm': '0 2px 8px -1px rgba(0, 0, 0, 0.05)',
+                        'soft-md': '0 10px 25px -5px rgba(148, 163, 184, 0.15), 0 8px 16px -6px rgba(148, 163, 184, 0.1)',
+                        'soft-lg': '0 20px 35px -10px rgba(148, 163, 184, 0.25), 0 10px 20px -8px rgba(148, 163, 184, 0.15)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #FAF9F6; /* Cozy Warm White */
+            background-image: radial-gradient(#E2E8F0 1px, transparent 1px);
+            background-size: 24px 24px;
+            font-size: 1.05rem;
+            overflow-x: hidden;
+        }
+
+        /* Smooth & Gentle Keyframe Animations */
+        @keyframes gentle-bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+        @keyframes soft-pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.03); opacity: 0.95; }
+        }
+        @keyframes rotate-slow {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .animate-gentle {
+            animation: gentle-bounce 3s ease-in-out infinite;
+        }
+        .animate-soft-pulse {
+            animation: soft-pulse 2s ease-in-out infinite;
+        }
+
+        /* Elegant Pastel Cards */
+        .pastel-card {
+            background-color: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: 0 10px 30px -10px rgba(160, 174, 192, 0.15);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .pastel-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px -15px rgba(160, 174, 192, 0.25);
+            border-color: rgba(203, 213, 225, 1);
+        }
+
+        /* Soft Pastel Buttons */
+        .pastel-btn {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .pastel-btn:active {
+            transform: scale(0.96);
+        }
+
+        /* Custom Scrollbar for pastel aesthetic */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #FAF9F6;
+        }
+        ::-webkit-scrollbar-thumb {
+            background-color: #CBD5E1;
+            border: 3px solid #FAF9F6;
+            border-radius: 9999px;
+        }
+    </style>
+</head>
+<body class="font-sans text-slate-700 selection:bg-pink-100 antialiased min-h-screen flex flex-col pb-16">
+
+<script>
+    // Audio Sound Synthesizer using Web Audio API (Calm & cute retro-synth sound effects)
+    class RetroSound {
+        constructor() {
+            this.ctx = null;
+            this.muted = false;
+        }
+        
+        init() {
+            if (!this.ctx) {
+                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        playTone(freq, type, duration, vol = 0.08) {
+            if (this.muted) return;
+            this.init();
+            try {
+                let osc = this.ctx.createOscillator();
+                let gain = this.ctx.createGain();
+                osc.type = type; // 'sine', 'triangle' for softer tones
+                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + duration);
+            } catch (e) { console.log("Audio error", e); }
+        }
+
+        playCoin() {
+            this.playTone(587.33, 'sine', 0.12, 0.1); // D5
+            setTimeout(() => {
+                this.playTone(880.00, 'sine', 0.2, 0.08); // A5
+            }, 60);
+        }
+
+        playClick() {
+            this.playTone(650, 'sine', 0.04, 0.08);
+        }
+
+        playWin() {
+            const notes = [329.63, 392.00, 523.25, 659.25]; // E4, G4, C5, E5
+            notes.forEach((freq, idx) => {
+                setTimeout(() => {
+                    this.playTone(freq, 'triangle', 0.15, 0.1);
+                }, idx * 100);
+            });
+        }
+
+        playLose() {
+            this.playTone(349.23, 'triangle', 0.15, 0.08);
+            setTimeout(() => {
+                this.playTone(261.63, 'triangle', 0.35, 0.08);
+            }, 120);
+        }
+
+        playExplosion() {
+            this.playTone(180, 'triangle', 0.25, 0.1);
+            this.playTone(100, 'sine', 0.3, 0.1);
+        }
+
+        toggleMute() {
+            this.muted = !this.muted;
+            const icon = document.getElementById('mute-icon');
+            if (this.muted) {
+                icon.className = 'fa-solid fa-volume-xmark text-slate-400';
+            } else {
+                icon.className = 'fa-solid fa-volume-high text-pink-500';
+                this.playCoin();
+            }
+        }
+    }
+    const sound = new RetroSound();
+</script>
+
+<header class="container mx-auto max-w-6xl mt-6 px-4">
+    <div class="bg-white/80 backdrop-blur-md border border-slate-100 shadow-soft-md p-4 flex flex-wrap items-center justify-between rounded-2xl gap-4">
+        <div class="flex items-center gap-3 cursor-pointer" onclick="showScreen('home')">
+            <div class="bg-pink-100 p-2.5 rounded-xl text-pink-600 text-2xl hover:scale-105 transition-transform flex items-center justify-center">
+                🦄
+            </div>
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-slate-800 select-none flex items-center gap-2">
+                    *파스텔 아케이드 포털* <span class="text-sm font-semibold bg-pink-100 text-pink-600 px-2 py-0.5 rounded-full">KIDS</span>
+                </h1>
+                <p class="text-xs font-medium text-slate-400 hidden sm:block">은은하고 재미있는 파스텔톤 놀이터 🎪</p>
+            </div>
+        </div>
+
+        <!-- Right Side Controls -->
+        <div class="flex items-center gap-3">
+            <!-- Sound controller -->
+            <button onclick="sound.toggleMute()" class="pastel-btn bg-slate-50 hover:bg-slate-100 text-slate-600 shadow-soft-sm w-11 h-11 rounded-xl flex items-center justify-center text-lg border border-slate-100" title="소리 켜기/끄기">
+                <i id="mute-icon" class="fa-solid fa-volume-high text-pink-500"></i>
+            </button>
+            
+            <!-- Home shortcut -->
+            <button onclick="showScreen('home')" class="pastel-btn bg-indigo-50 hover:bg-indigo-100 text-indigo-600 shadow-soft-sm px-4 py-2.5 rounded-xl font-semibold flex items-center gap-2 text-sm border border-indigo-100">
+                <i class="fa-solid fa-house"></i> 홈으로
+            </button>
+        </div>
+    </div>
+</header>
+
+<main class="container mx-auto max-w-6xl flex-grow px-4 mt-8 flex flex-col justify-start">
+    
+    <section id="screen-home" class="screen-view space-y-8 block">
+        <!-- Relaxing Beautiful Hero Slider -->
+        <div class="bg-gradient-to-br from-purple-100/50 via-pink-100/40 to-sky-100/50 border border-slate-100 shadow-soft-md p-8 rounded-3xl relative overflow-hidden flex flex-col justify-between min-h-[220px]">
+            <div class="absolute -right-4 -top-4 text-7xl opacity-20 rotate-12 select-none">🧸🎈🍭🌈</div>
+            
+            <div class="space-y-3 max-w-xl">
+                <span class="bg-white/80 text-slate-600 px-3 py-1 rounded-full text-xs font-semibold tracking-wide border border-slate-200 shadow-soft-sm">Sweet Play Zone</span>
+                <h2 class="text-3xl sm:text-4xl font-bold text-slate-800 leading-tight">
+                    원하는 미니게임을 골라봐!<br>
+                    <span class="text-indigo-500 font-extrabold underline decoration-pink-300 decoration-wavy underline-offset-4">언제든 재밌게 놀이터!</span> ✨
+                </h2>
+            </div>
+
+            <!-- Lucky Fortune Widget -->
+            <div class="bg-white/90 border border-slate-100 p-4 rounded-2xl shadow-soft-md max-w-md mt-6 flex items-center gap-4 relative z-10">
+                <div class="text-3xl animate-gentle">🔮</div>
+                <div class="flex-grow">
+                    <h3 class="font-bold text-sm text-slate-700">오늘의 요정 한마디 & 추천!</h3>
+                    <p id="fortune-text" class="text-xs text-slate-500 mt-0.5">버튼을 누르면 행복한 일이 생길 거에요!</p>
+                </div>
+                <button onclick="spinFortune()" class="pastel-btn text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-2 rounded-xl font-bold border border-indigo-100 shadow-soft-sm shrink-0">
+                    뽑기
+                </button>
+            </div>
+        </div>
+
+        <!-- Game Selection Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <!-- Game Card 1: Tetris -->
+            <div class="pastel-card p-6 rounded-2xl cursor-pointer group flex flex-col justify-between" onclick="showScreen('tetris')">
+                <div>
+                    <div class="bg-pink-100 text-pink-500 w-12 h-12 rounded-xl flex items-center justify-center text-2xl shadow-soft-sm mb-4 group-hover:scale-110 transition-transform">
+                        🧱
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800">1. 탱글 테트리스</h3>
+                    <p class="text-xs text-slate-400 font-medium mt-2 leading-relaxed">블록들을 차곡차곡 줄을 맞추고 말랑하게 터트리자!</p>
+                </div>
+                <div class="mt-6 flex items-center justify-between">
+                    <span class="bg-pink-50 text-pink-600 text-[11px] font-semibold px-2.5 py-1 rounded-full border border-pink-100">지능 쑥쑥</span>
+                    <i class="fa-solid fa-arrow-right text-pink-400 group-hover:translate-x-1 transition-transform"></i>
+                </div>
+            </div>
+
+            <!-- Game Card 2: Ladder -->
+            <div class="pastel-card p-6 rounded-2xl cursor-pointer group flex flex-col justify-between" onclick="showScreen('ladder')">
+                <div>
+                    <div class="bg-sky-100 text-sky-500 w-12 h-12 rounded-xl flex items-center justify-center text-2xl shadow-soft-sm mb-4 group-hover:scale-110 transition-transform">
+                        🪜
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800">2. 동물 친구 사다리</h3>
+                    <p class="text-xs text-slate-400 font-medium mt-2 leading-relaxed">사다리를 타고 한 명씩 안전하게 착지해 보상을 정해요!</p>
+                </div>
+                <div class="mt-6 flex items-center justify-between">
+                    <span class="bg-sky-50 text-sky-600 text-[11px] font-semibold px-2.5 py-1 rounded-full border border-sky-100">두근두근</span>
+                    <i class="fa-solid fa-arrow-right text-sky-400 group-hover:translate-x-1 transition-transform"></i>
+                </div>
+            </div>
+
+            <!-- Game Card 3: Bingo -->
+            <div class="pastel-card p-6 rounded-2xl cursor-pointer group flex flex-col justify-between" onclick="showScreen('bingo')">
+                <div>
+                    <div class="bg-emerald-100 text-emerald-500 w-12 h-12 rounded-xl flex items-center justify-center text-2xl shadow-soft-sm mb-4 group-hover:scale-110 transition-transform">
+                        🦁
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800">3. 동물원 빙고 게임</h3>
+                    <p class="text-xs text-slate-400 font-medium mt-2 leading-relaxed">귀여운 로봇 동물원 도우미와 함께하는 5줄 빙고!</p>
+                </div>
+                <div class="mt-6 flex items-center justify-between">
+                    <span class="bg-emerald-50 text-emerald-600 text-[11px] font-semibold px-2.5 py-1 rounded-full border border-emerald-100">지혜 대결</span>
+                    <i class="fa-solid fa-arrow-right text-emerald-400 group-hover:translate-x-1 transition-transform"></i>
+                </div>
+            </div>
+
+            <!-- Game Card 4: Roulette -->
+            <div class="pastel-card p-6 rounded-2xl cursor-pointer group flex flex-col justify-between" onclick="showScreen('roulette')">
+                <div>
+                    <div class="bg-purple-100 text-purple-500 w-12 h-12 rounded-xl flex items-center justify-center text-2xl shadow-soft-sm mb-4 group-hover:scale-110 transition-transform">
+                        🎯
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800">4. 빙글빙글 룰렛</h3>
+                    <p class="text-xs text-slate-400 font-medium mt-2 leading-relaxed">무엇을 할지 고민이 될 땐 부드러운 룰렛을 돌려봐요!</p>
+                </div>
+                <div class="mt-6 flex items-center justify-between">
+                    <span class="bg-purple-50 text-purple-600 text-[11px] font-semibold px-2.5 py-1 rounded-full border border-purple-100">행운 팡팡</span>
+                    <i class="fa-solid fa-arrow-right text-purple-400 group-hover:translate-x-1 transition-transform"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mascot Helper Bubble at the Bottom -->
+        <div class="bg-white/80 backdrop-blur-md border border-slate-100 shadow-soft-md p-5 rounded-2xl flex items-center gap-4 max-w-2xl mx-auto">
+            <span class="text-4xl animate-gentle shrink-0">🦕</span>
+            <div class="space-y-1">
+                <span class="text-[10px] font-bold bg-pink-100 text-pink-600 px-2 py-0.5 rounded-full uppercase">용용이 가이드</span>
+                <p class="text-xs font-semibold text-slate-500 leading-relaxed">
+                    "안녕 친구! 난 은은한 무지개 섬에서 온 가이드 공룡 용용이야! 위에서 마음에 드는 게임을 고르면 바로 시작돼. 놀다가 질리면 언제든 위쪽 <b class='text-indigo-500'>[홈으로]</b> 버튼을 눌러줘!"
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <section id="screen-tetris" class="screen-view space-y-6 hidden">
+        <div class="bg-white/90 border border-slate-100 shadow-soft-lg p-6 rounded-3xl">
+            <!-- Header -->
+            <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-6 flex-wrap gap-4">
+                <div class="flex items-center gap-3">
+                    <span class="text-3xl">🧱</span>
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800">탱글 테트리스</h2>
+                        <p class="text-xs font-medium text-slate-400 mt-1">블록들을 회전시켜 은은한 젤리 줄들을 완성해봐요!</p>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="startTetris()" class="pastel-btn bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-4 py-2 rounded-xl text-sm font-bold border border-indigo-100 shadow-soft-sm">게임 시작</button>
+                    <button onclick="pauseTetris()" class="pastel-btn bg-slate-50 hover:bg-slate-100 text-slate-500 px-4 py-2 rounded-xl text-sm font-semibold border border-slate-100">일시정지</button>
+                </div>
+            </div>
+
+            <!-- Game Field Zone -->
+            <div class="flex flex-col md:flex-row gap-8 items-stretch justify-center">
+                <!-- Main Board Screen -->
+                <div class="relative bg-slate-50 border border-slate-100 shadow-inner rounded-2xl p-3 flex items-center justify-center select-none" style="min-height: 440px;">
+                    <div id="tetris-board" class="grid grid-cols-10 gap-0.5 bg-white p-1 rounded-xl border border-slate-100" style="width: 240px; height: 480px;">
+                        <!-- Generated by JS: 200 blocks (10x20) -->
+                    </div>
+                    
+                    <!-- Game Over Modal overlay -->
+                    <div id="tetris-gameover" class="hidden absolute inset-0 bg-white/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center rounded-2xl z-20">
+                        <span class="text-5xl animate-gentle">🧸</span>
+                        <h3 class="text-2xl font-bold text-indigo-500 mt-4">게임 오버!</h3>
+                        <p class="text-sm font-medium text-slate-500 mt-2">정말 대단해요! 멋진 모험을 마쳤어요.</p>
+                        <div class="my-4 bg-slate-50 border border-slate-100 p-3 rounded-xl w-full max-w-xs">
+                            <p class="text-xs text-slate-400 font-bold">최종 점수</p>
+                            <p class="text-2xl font-extrabold text-pink-500 mt-1" id="tetris-final-score">0점</p>
+                        </div>
+                        <button onclick="startTetris()" class="pastel-btn bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-soft-sm">다시하기</button>
+                    </div>
+                </div>
+
+                <!-- Side Panel -->
+                <div class="flex flex-col gap-4 w-full md:w-60 justify-between">
+                    <!-- Stats Card -->
+                    <div class="bg-pink-50/50 border border-pink-100/60 p-4 rounded-2xl shadow-soft-sm">
+                        <h3 class="font-bold text-sm text-pink-600 border-b border-pink-100/40 pb-2 mb-3 flex items-center gap-1">⭐ 내 기록</h3>
+                        <div class="flex justify-between text-xs font-semibold text-slate-600">
+                            <span>최고 점수:</span>
+                            <span id="tetris-highscore" class="text-pink-600 font-bold">0</span>
+                        </div>
+                        <div class="flex justify-between text-sm font-bold text-slate-700 mt-2">
+                            <span>현재 점수:</span>
+                            <span id="tetris-score" class="text-indigo-600 font-extrabold">0</span>
+                        </div>
+                        <div class="flex justify-between text-xs font-semibold text-slate-600 mt-2">
+                            <span>레벨:</span>
+                            <span id="tetris-level" class="text-purple-600 font-bold">1</span>
+                        </div>
+                    </div>
+
+                    <!-- Next Preview Card -->
+                    <div class="bg-indigo-50/40 border border-indigo-100/50 p-4 rounded-2xl shadow-soft-sm">
+                        <h3 class="font-bold text-sm text-indigo-600 border-b border-indigo-100/30 pb-2 mb-3 flex items-center gap-1">👀 다음 블록</h3>
+                        <div class="flex items-center justify-center bg-white border border-slate-100 rounded-xl h-20 shadow-inner">
+                            <div id="tetris-next" class="grid grid-cols-4 grid-rows-4 gap-0.5" style="width: 72px; height: 72px;">
+                                <!-- 4x4 matrix for preview -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mobile / Keyboard Controls -->
+                    <div class="bg-slate-50 border border-slate-100 p-4 rounded-2xl shadow-soft-sm">
+                        <h3 class="font-bold text-xs text-slate-500 mb-3 border-b border-slate-200 pb-2">🎮 쉬운 조작 패드</h3>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button onclick="moveTetris('L')" class="pastel-btn bg-white hover:bg-slate-100 py-2.5 rounded-lg text-slate-600 border border-slate-200/60 shadow-soft-sm"><i class="fa-solid fa-arrow-left"></i></button>
+                            <button onclick="moveTetris('ROT')" class="pastel-btn bg-indigo-50 hover:bg-indigo-100 py-2.5 rounded-lg text-indigo-600 border border-indigo-200/50 shadow-soft-sm font-bold">회전</button>
+                            <button onclick="moveTetris('R')" class="pastel-btn bg-white hover:bg-slate-100 py-2.5 rounded-lg text-slate-600 border border-slate-200/60 shadow-soft-sm"><i class="fa-solid fa-arrow-right"></i></button>
+                            <button onclick="moveTetris('D')" class="pastel-btn bg-white hover:bg-slate-100 py-2.5 rounded-lg text-slate-600 border border-slate-200/60 shadow-soft-sm col-span-3 text-xs font-medium">살살 내리기</button>
+                            <button onclick="moveTetris('DROP')" class="pastel-btn bg-pink-100 hover:bg-pink-200 text-pink-600 py-2.5 rounded-lg font-bold col-span-3 text-xs shadow-soft-sm">⚡ 번개 즉시 떨어뜨리기</button>
+                        </div>
+                        <p class="text-[10px] text-slate-400 text-center mt-3 hidden md:block">컴퓨터 키보드 방향키(←, →, ↑:회전, ↓)와 Space바도 쓸 수 있어요!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="screen-ladder" class="screen-view space-y-6 hidden">
+        <div class="bg-white/90 border border-slate-100 shadow-soft-lg p-6 rounded-3xl">
+            <!-- Header -->
+            <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-6 flex-wrap gap-4">
+                <div class="flex items-center gap-3">
+                    <span class="text-3xl">🪜</span>
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800">동물 친구 사다리</h2>
+                        <p class="text-xs font-medium text-slate-400 mt-1">친구들과 하나씩 순서대로 귀여운 사다리를 타면서 모험해요!</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <label class="font-bold text-xs text-slate-500">인원 설정:</label>
+                    <select id="ladder-player-count" onchange="setupLadder()" class="border border-slate-200 px-2 py-1.5 rounded-xl bg-slate-50 text-slate-700 text-xs font-bold shadow-soft-sm">
+                        <option value="2">2명</option>
+                        <option value="3" selected>3명</option>
+                        <option value="4">4명</option>
+                        <option value="5">5명</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Setup Input Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-8 items-stretch">
+                <!-- Inputs Setting (4 cols) -->
+                <div class="md:col-span-5 bg-sky-50/30 border border-sky-100/40 p-5 rounded-2xl flex flex-col justify-between">
+                    <div>
+                        <h3 class="font-bold text-sm text-sky-600 mb-4 border-b border-sky-100/30 pb-2 flex items-center gap-1">✏️ 이름과 보상 입력하기</h3>
+                        <div id="ladder-inputs" class="space-y-2.5">
+                            <!-- JS Inject dynamically -->
+                        </div>
+                    </div>
+                    <div class="mt-8">
+                        <button onclick="shuffleLadder()" class="pastel-btn w-full bg-amber-50 hover:bg-amber-100 text-amber-700 py-3.5 rounded-2xl font-bold text-xs border border-amber-200/50 shadow-soft-sm flex items-center justify-center gap-1.5">
+                            🎲 벌칙 & 경로 새로 섞기
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Canvas Side (7 cols) -->
+                <div class="md:col-span-7 bg-white/90 border border-slate-100 shadow-soft-md rounded-2xl p-4 flex flex-col items-center">
+                    <div id="ladder-status" class="bg-indigo-50/60 font-semibold text-center text-[11px] text-indigo-600 py-1.5 px-4 border border-indigo-100/50 rounded-full mb-4 select-none">
+                        원하는 동물의 출발 버튼을 눌러보세요!
+                    </div>
+                    <div class="relative w-full overflow-auto max-w-full" style="max-height: 480px;">
+                        <canvas id="ladder-canvas" width="420" height="380" class="bg-white border border-slate-100 rounded-xl mx-auto block"></canvas>
+                    </div>
+
+                    <!-- Individual Player Launch Pad -->
+                    <div class="w-full mt-6 space-y-2">
+                        <div class="flex items-center justify-between border-b border-slate-100 pb-1.5 mb-2">
+                            <span class="text-xs font-bold text-slate-500">🐾 한 사람씩 출발하기 (아래 버튼을 눌러요!)</span>
+                            <button onclick="resetLadderRuns()" class="text-[10px] text-indigo-500 hover:text-indigo-600 font-bold bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg border border-indigo-100 transition-all">진행 기록만 리셋</button>
+                        </div>
+                        <div id="ladder-controllers" class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <!-- Dynamic launch buttons generated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="screen-bingo" class="screen-view space-y-6 hidden">
+        <div class="bg-white/90 border border-slate-100 shadow-soft-lg p-6 rounded-3xl">
+            <!-- Header -->
+            <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-6 flex-wrap gap-4">
+                <div class="flex items-center gap-3">
+                    <span class="text-3xl">🦁</span>
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800">동물원 빙고 게임</h2>
+                        <p class="text-xs font-medium text-slate-400 mt-1">인공지능 로보몽🤖과 번갈아 동물을 골라 5줄 빙고 대결!</p>
+                    </div>
+                </div>
+                <button onclick="startBingoGame()" class="pastel-btn bg-emerald-50 hover:bg-emerald-100 text-emerald-600 px-4 py-2 rounded-xl text-xs font-bold border border-emerald-100 shadow-soft-sm">다시 게임하기</button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+                <!-- Player Board Side -->
+                <div class="lg:col-span-7 bg-amber-50/20 border border-amber-100/40 p-5 rounded-2xl shadow-soft-sm flex flex-col items-center">
+                    <div class="flex justify-between w-full mb-4">
+                        <span class="bg-pink-100 text-pink-600 font-bold px-3 py-1 rounded-full text-xs border border-pink-200">🧒 내 빙고판</span>
+                        <span id="player-lines" class="font-bold text-xs text-slate-600">성공: <b class="text-pink-600 text-base">0</b> 줄 / 5줄</span>
+                    </div>
+
+                    <!-- Bingo Grid Board -->
+                    <div id="player-bingo-board" class="grid grid-cols-5 gap-2 w-full max-w-md bg-white border border-slate-100 p-2 rounded-2xl shadow-inner">
+                        <!-- Dynamic generated 5x5 -->
+                    </div>
+                </div>
+
+                <!-- Interactive Info & Control Side -->
+                <div class="lg:col-span-5 flex flex-col gap-4">
+                    <!-- AI Score card -->
+                    <div class="bg-indigo-50/40 border border-indigo-100/50 p-5 rounded-2xl shadow-soft-sm space-y-3">
+                        <h3 class="font-bold text-sm text-indigo-700 border-b border-indigo-100/30 pb-2 flex items-center gap-1">🤖 컴퓨터 로보몽의 상황</h3>
+                        <div class="flex justify-between font-semibold text-xs text-slate-600">
+                            <span>컴퓨터 성공한 줄:</span>
+                            <span id="ai-lines" class="text-indigo-600 font-bold">0 줄</span>
+                        </div>
+                        <div class="bg-white border border-slate-100 p-3 rounded-xl min-h-[60px] flex items-center">
+                            <p id="ai-status" class="text-xs font-semibold text-slate-500 leading-relaxed">"반가워! 내 동물원 상식이 엄청나다고!"</p>
+                        </div>
+                    </div>
+
+                    <!-- Rules Card -->
+                    <div class="bg-emerald-50/30 border border-emerald-100/40 p-5 rounded-2xl flex-grow shadow-soft-sm space-y-4">
+                        <h3 class="font-bold text-sm text-emerald-700 border-b border-emerald-100/30 pb-2 flex items-center gap-1">💡 플레이 가이드</h3>
+                        <ul class="text-[11px] text-slate-500 font-semibold space-y-2 list-none pl-1">
+                            <li class="flex gap-2">⭐ <p class="flex-grow">원하는 귀여운 동물을 직접 누르면 하트(💖) 도장이 찍힙니다.</p></li>
+                            <li class="flex gap-2">⭐ <p class="flex-grow">동시에 컴퓨터도 나를 위협할 만한 전략적인 자리를 차지합니다.</p></li>
+                            <li class="flex gap-2">⭐ <p class="flex-grow">가로, 세로, 대각선 중 한 줄이 완성되면 1줄을 채우게 됩니다.</p></li>
+                            <li class="flex gap-2">⭐ <p class="flex-grow">먼저 5줄을 만들어 아래 <b class="text-indigo-600">"빙고!"</b> 버튼을 누르면 이깁니다!</p></li>
+                        </ul>
+                        <!-- Bingo Claim -->
+                        <button onclick="claimBingo()" class="pastel-btn bg-indigo-500 hover:bg-indigo-600 text-white font-bold w-full py-3.5 rounded-xl text-sm shadow-soft-md">
+                            🔔 빙고!! 소리치기!
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="screen-roulette" class="screen-view space-y-6 hidden">
+        <div class="bg-white/90 border border-slate-100 shadow-soft-lg p-6 rounded-3xl">
+            <!-- Header -->
+            <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-6 flex-wrap gap-4">
+                <div class="flex items-center gap-3">
+                    <span class="text-3xl">🎯</span>
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800">빙글빙글 룰렛</h2>
+                        <p class="text-xs font-medium text-slate-400 mt-1">오늘 점심 메뉴, 심부름 등 결정하기 힘든 것들을 편안하게 돌려요!</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
+                <!-- List Side -->
+                <div class="md:col-span-4 bg-purple-50/30 border border-purple-100/40 p-5 rounded-2xl shadow-soft-sm space-y-4">
+                    <h3 class="font-bold text-sm text-purple-700 border-b border-purple-100/30 pb-2">🛠️ 선택지 꾸미기</h3>
+                    
+                    <div class="space-y-3">
+                        <div class="space-y-1.5">
+                            <label class="text-[11px] font-semibold text-slate-400">새 항목 추가:</label>
+                            <div class="flex gap-2">
+                                <input type="text" id="roulette-new-item" placeholder="예: 맛있는 젤리" class="border border-slate-200 px-3 py-2 rounded-xl flex-grow text-xs font-semibold bg-white/90 shadow-soft-sm focus:outline-none focus:border-purple-300">
+                                <button onclick="addRouletteItem()" class="pastel-btn bg-purple-100 hover:bg-purple-200 text-purple-700 px-3.5 rounded-xl font-bold text-sm border border-purple-200/50 shadow-soft-sm">+</button>
+                            </div>
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <label class="text-[11px] font-semibold text-slate-400">등록된 항목 목록:</label>
+                            <div id="roulette-items-list" class="space-y-2 max-h-44 overflow-y-auto pr-1 border border-slate-100 p-2.5 rounded-xl bg-white shadow-inner">
+                                <!-- Dynamic List -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Spinning Wheel Canvas Side -->
+                <div class="md:col-span-8 flex flex-col items-center justify-center p-4">
+                    <div class="relative flex flex-col items-center">
+                        <!-- Top Pointer -->
+                        <div class="absolute -top-3 z-20 text-3xl transform -translate-y-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.1)]">👇</div>
+
+                        <!-- Wheel Container -->
+                        <div class="w-72 h-72 sm:w-80 sm:h-80 border-4 border-white rounded-full overflow-hidden shadow-soft-lg bg-white relative" style="transform: rotate(0deg); transition: transform 4s cubic-bezier(0.15, 0.85, 0.3, 1);" id="roulette-wheel">
+                            <canvas id="roulette-canvas" width="320" height="320" class="w-full h-full block"></canvas>
+                        </div>
+
+                        <!-- Central Spin Button -->
+                        <button onclick="spinRoulette()" class="pastel-btn absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white hover:bg-pink-50 text-pink-500 font-extrabold text-sm rounded-full w-14 h-14 border border-pink-100 shadow-soft-lg flex items-center justify-center z-10 select-none animate-soft-pulse">
+                            Go!
+                        </button>
+                    </div>
+
+                    <button onclick="spinRoulette()" class="pastel-btn bg-indigo-500 hover:bg-indigo-600 text-white font-bold text-sm px-12 py-3.5 rounded-2xl shadow-soft-md mt-8">
+                        🎡 신나게 룰렛 돌리기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<div id="result-modal" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white border border-slate-100 shadow-soft-lg p-6 rounded-3xl max-w-sm w-full text-center relative">
+        <span class="text-5xl animate-gentle" id="modal-emoji">🎁</span>
+        <h3 class="text-xl font-bold text-indigo-600 mt-4" id="modal-title">축하합니다!</h3>
+        <p class="text-xs font-semibold text-slate-500 mt-2 leading-relaxed" id="modal-message">오늘도 즐거운 일 가득!</p>
+        
+        <div class="mt-6 border-t border-slate-100 pt-4">
+            <button onclick="closeModal()" class="pastel-btn bg-indigo-500 hover:bg-indigo-600 text-white w-full py-2.5 rounded-xl text-xs font-bold shadow-soft-sm">닫기</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- View Controller / Screen Switcher ---
+    function showScreen(screenId) {
+        sound.playClick();
+        document.querySelectorAll('.screen-view').forEach(screen => {
+            screen.classList.add('hidden');
+        });
+        document.getElementById(`screen-${screenId}`).classList.remove('hidden');
+
+        // Initialize corresponding game systems
+        if (screenId === 'tetris') {
+            initTetris();
+        } else if (screenId === 'ladder') {
+            setupLadder();
+        } else if (screenId === 'bingo') {
+            startBingoGame();
+        } else if (screenId === 'roulette') {
+            renderRoulette();
+        }
+    }
+
+    // --- Lucky Fortune Widget Logic ---
+    const fortunes = [
+        { text: "아주 우연한 기회에 마음에 쏙 드는 맛있는 과자를 발견해요! 🍦", emoji: "🍦" },
+        { text: "용용이가 주는 행운 파워! 오늘 급식에서 맛있는 반찬이 나와요! 🍗", emoji: "🍗" },
+        { text: "오늘 친구에게 가볍게 먼저 웃어주면, 멋진 선물이 찾아옵니다! ✨", emoji: "✨" },
+        { text: "조금 어려운 문제도 머리를 가볍게 쓰면 술술 풀어질 거에요! 💡", emoji: "💡" },
+        { text: "즐겁게 게임을 이기는 하루, 모든 미션 완벽 정복 가능! 🎮", emoji: "🎮" },
+        { text: "달콤하고 시원한 음료수 마시면서 기분이 최고가 되는 시간! 🍹", emoji: "🍹" }
+    ];
+
+    function spinFortune() {
+        sound.playCoin();
+        const rand = fortunes[Math.floor(Math.random() * fortunes.length)];
+        const textElement = document.getElementById('fortune-text');
+        textElement.innerText = "요정 상자를 열어보고 있어요...";
+        
+        setTimeout(() => {
+            textElement.innerHTML = `<span class='text-pink-500 font-bold'>${rand.emoji}</span> ${rand.text}`;
+            // Soft Confetti burst
+            confetti({
+                particleCount: 40,
+                spread: 50,
+                origin: { y: 0.8 }
+            });
+        }, 500);
+    }
+
+    // Modal Helper
+    function showModal(title, msg, emoji = "🎁") {
+        document.getElementById('modal-title').innerText = title;
+        document.getElementById('modal-message').innerText = msg;
+        document.getElementById('modal-emoji').innerText = emoji;
+        document.getElementById('result-modal').classList.remove('hidden');
+    }
+    function closeModal() {
+        sound.playClick();
+        document.getElementById('result-modal').classList.add('hidden');
+    }
+</script>
+
+<script>
+    // --- TETRIS GAME CODE ---
+    let tetrisTimer = null;
+    let tetrisBoard = [];
+    let currentPiece = null;
+    let nextPiece = null;
+    let tetrisScore = 0;
+    let tetrisHighScore = parseInt(localStorage.getItem('tetris_high_pastel') || 0);
+    let tetrisLevel = 1;
+    let tetrisGameOver = false;
+
+    // Soft pastel color combinations with cute symbols for kids
+    const SHAPES = {
+        I: { matrix: [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]], color: '#FFD1DC', face: '🧁' }, // Pastel Pink
+        O: { matrix: [[1,1],[1,1]], color: '#FFF9A6', face: '⭐' }, // Soft Yellow
+        T: { matrix: [[0,1,0],[1,1,1],[0,0,0]], color: '#D5AAFF', face: '🍬' }, // Soft Lilac
+        S: { matrix: [[0,1,1],[1,1,0],[0,0,0]], color: '#C1FFC1', face: '🍀' }, // Soft Mint
+        Z: { matrix: [[1,1,0],[0,1,1],[0,0,0]], color: '#FFB3BA', face: '🍒' }, // Pastel Red
+        J: { matrix: [[1,0,0],[1,1,1],[0,0,0]], color: '#BAE1FF', face: '🐳' }, // Soft Blue
+        L: { matrix: [[0,0,1],[1,1,1],[0,0,0]], color: '#FFDFBA', face: '🥕' }  // Pastel Peach
+    };
+
+    function initTetris() {
+        document.getElementById('tetris-highscore').innerText = tetrisHighScore;
+        renderTetrisDOM();
+    }
+
+    function renderTetrisDOM() {
+        const boardEl = document.getElementById('tetris-board');
+        boardEl.innerHTML = '';
+        for (let i = 0; i < 200; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'w-full h-full bg-slate-50/50 border border-slate-100/50 rounded flex items-center justify-center text-[10px] select-none transition-all duration-100 overflow-hidden';
+            cell.id = `t-${i}`;
+            boardEl.appendChild(cell);
+        }
+    }
+
+    function startTetris() {
+        sound.playCoin();
+        tetrisBoard = Array(20).fill().map(() => Array(10).fill(0));
+        tetrisScore = 0;
+        tetrisLevel = 1;
+        tetrisGameOver = false;
+        document.getElementById('tetris-gameover').classList.add('hidden');
+        document.getElementById('tetris-score').innerText = tetrisScore;
+        document.getElementById('tetris-level').innerText = tetrisLevel;
+        
+        currentPiece = getRandomPiece();
+        nextPiece = getRandomPiece();
+        drawNextPreview();
+
+        if (tetrisTimer) clearInterval(tetrisTimer);
+        tetrisTimer = setInterval(tetrisTick, 800);
+        updateBoardDisplay();
+    }
+
+    function pauseTetris() {
+        sound.playClick();
+        if (tetrisTimer) {
+            clearInterval(tetrisTimer);
+            tetrisTimer = null;
+        } else if (!tetrisGameOver) {
+            tetrisTimer = setInterval(tetrisTick, Math.max(120, 900 - tetrisLevel * 90));
+        }
+    }
+
+    function getRandomPiece() {
+        const keys = Object.keys(SHAPES);
+        const type = keys[Math.floor(Math.random() * keys.length)];
+        const shape = SHAPES[type];
+        return {
+            matrix: JSON.parse(JSON.stringify(shape.matrix)),
+            color: shape.color,
+            face: shape.face,
+            x: Math.floor((10 - shape.matrix[0].length) / 2),
+            y: 0
+        };
+    }
+
+    function tetrisTick() {
+        if (!moveCurrent(0, 1)) {
+            lockPiece();
+        }
+        updateBoardDisplay();
+    }
+
+    function moveCurrent(dx, dy) {
+        if (canMove(currentPiece.matrix, currentPiece.x + dx, currentPiece.y + dy)) {
+            currentPiece.x += dx;
+            currentPiece.y += dy;
+            return true;
+        }
+        return false;
+    }
+
+    function canMove(matrix, tx, ty) {
+        for (let y = 0; y < matrix.length; y++) {
+            for (let x = 0; x < matrix[y].length; x++) {
+                if (matrix[y][x]) {
+                    let nextX = tx + x;
+                    let nextY = ty + y;
+                    if (nextX < 0 || nextX >= 10 || nextY >= 20) return false;
+                    if (nextY >= 0 && tetrisBoard[nextY][nextX]) return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    function lockPiece() {
+        for (let y = 0; y < currentPiece.matrix.length; y++) {
+            for (let x = 0; x < currentPiece.matrix[y].length; x++) {
+                if (currentPiece.matrix[y][x]) {
+                    if (currentPiece.y + y < 0) {
+                        endTetrisGame();
+                        return;
+                    }
+                    tetrisBoard[currentPiece.y + y][currentPiece.x + x] = {
+                        color: currentPiece.color,
+                        face: currentPiece.face
+                    };
+                }
+            }
+        }
+        sound.playClick();
+        clearLines();
+        currentPiece = nextPiece;
+        nextPiece = getRandomPiece();
+        drawNextPreview();
+        if (!canMove(currentPiece.matrix, currentPiece.x, currentPiece.y)) {
+            endTetrisGame();
+        }
+    }
+
+    function clearLines() {
+        let linesCleared = 0;
+        for (let y = 19; y >= 0; y--) {
+            if (tetrisBoard[y].every(cell => cell !== 0)) {
+                tetrisBoard.splice(y, 1);
+                tetrisBoard.unshift(Array(10).fill(0));
+                linesCleared++;
+                y++;
+            }
+        }
+        if (linesCleared > 0) {
+            tetrisScore += linesCleared * 100 * tetrisLevel;
+            document.getElementById('tetris-score').innerText = tetrisScore;
+            sound.playExplosion();
+            
+            // Speed scaling up with soft capped level limits
+            tetrisLevel = Math.floor(tetrisScore / 400) + 1;
+            document.getElementById('tetris-level').innerText = tetrisLevel;
+            clearInterval(tetrisTimer);
+            tetrisTimer = setInterval(tetrisTick, Math.max(120, 900 - tetrisLevel * 90));
+
+            // Saved pastel highest score
+            if (tetrisScore > tetrisHighScore) {
+                tetrisHighScore = tetrisScore;
+                localStorage.setItem('tetris_high_pastel', tetrisHighScore);
+                document.getElementById('tetris-highscore').innerText = tetrisHighScore;
+            }
+
+            // Confetti joy bursts
+            confetti({ particleCount: 30, spread: 40 });
+        }
+    }
+
+    function rotatePiece() {
+        const matrix = currentPiece.matrix;
+        const n = matrix.length;
+        let rotated = Array(n).fill().map(() => Array(n).fill(0));
+        for (let y = 0; y < n; y++) {
+            for (let x = 0; x < n; x++) {
+                rotated[x][n - 1 - y] = matrix[y][x];
+            }
+        }
+        if (canMove(rotated, currentPiece.x, currentPiece.y)) {
+            currentPiece.matrix = rotated;
+            sound.playTone(440, 'sine', 0.08, 0.05);
+        }
+    }
+
+    function endTetrisGame() {
+        sound.playLose();
+        tetrisGameOver = true;
+        clearInterval(tetrisTimer);
+        document.getElementById('tetris-final-score').innerText = `${tetrisScore}점`;
+        document.getElementById('tetris-gameover').classList.remove('hidden');
+    }
+
+    function updateBoardDisplay() {
+        // Reset Board Classes
+        for (let i = 0; i < 200; i++) {
+            const cell = document.getElementById(`t-${i}`);
+            cell.style.backgroundColor = '';
+            cell.innerText = '';
+            cell.className = 'w-full h-full bg-slate-50/50 border border-slate-100/50 rounded-md flex items-center justify-center text-[10px]';
+        }
+
+        // Render Locked Blocks
+        for (let y = 0; y < 20; y++) {
+            for (let x = 0; x < 10; x++) {
+                if (tetrisBoard[y][x]) {
+                    const idx = y * 10 + x;
+                    const cell = document.getElementById(`t-${idx}`);
+                    cell.style.backgroundColor = tetrisBoard[y][x].color;
+                    cell.innerText = tetrisBoard[y][x].face;
+                    cell.className += ' shadow-sm border border-white/60';
+                }
+            }
+        }
+
+        // Render Dropping Block
+        if (currentPiece) {
+            for (let y = 0; y < currentPiece.matrix.length; y++) {
+                for (let x = 0; x < currentPiece.matrix[y].length; x++) {
+                    if (currentPiece.matrix[y][x]) {
+                        const boardY = currentPiece.y + y;
+                        const boardX = currentPiece.x + x;
+                        if (boardY >= 0 && boardY < 20 && boardX >= 0 && boardX < 10) {
+                            const idx = boardY * 10 + boardX;
+                            const cell = document.getElementById(`t-${idx}`);
+                            cell.style.backgroundColor = currentPiece.color;
+                            cell.innerText = currentPiece.face;
+                            cell.className += ' shadow-sm border border-white/60';
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    function drawNextPreview() {
+        const nextEl = document.getElementById('tetris-next');
+        nextEl.innerHTML = '';
+        if (!nextPiece) return;
+        
+        for (let y = 0; y < 4; y++) {
+            for (let x = 0; x < 4; x++) {
+                const block = document.createElement('div');
+                block.className = 'w-4.5 h-4.5 rounded flex items-center justify-center text-[8px]';
+                
+                const pieceMatrix = nextPiece.matrix;
+                if (y < pieceMatrix.length && x < pieceMatrix[y].length && pieceMatrix[y][x]) {
+                    block.style.backgroundColor = nextPiece.color;
+                    block.innerText = nextPiece.face;
+                    block.className += ' border border-white shadow-sm';
+                }
+                nextEl.appendChild(block);
+            }
+        }
+    }
+
+    function moveTetris(dir) {
+        if (tetrisGameOver || !currentPiece) return;
+        if (dir === 'L') moveCurrent(-1, 0);
+        if (dir === 'R') moveCurrent(1, 0);
+        if (dir === 'D') moveCurrent(0, 1);
+        if (dir === 'ROT') rotatePiece();
+        if (dir === 'DROP') {
+            sound.playTone(660, 'sine', 0.08, 0.05);
+            while (moveCurrent(0, 1)) {}
+            lockPiece();
+        }
+        updateBoardDisplay();
+    }
+
+    // Bind Keyboard Standard Controls
+    window.addEventListener('keydown', (e) => {
+        const isVisible = !document.getElementById('screen-tetris').classList.contains('hidden');
+        if (!isVisible) return;
+        
+        if (e.key === 'ArrowLeft') { e.preventDefault(); moveTetris('L'); }
+        if (e.key === 'ArrowRight') { e.preventDefault(); moveTetris('R'); }
+        if (e.key === 'ArrowDown') { e.preventDefault(); moveTetris('D'); }
+        if (e.key === 'ArrowUp') { e.preventDefault(); moveTetris('ROT'); }
+        if (e.key === ' ') { e.preventDefault(); moveTetris('DROP'); }
+    });
+</script>
+
+<script>
+    let ladderData = {
+        players: [],
+        prizes: [],
+        lines: [], 
+        tracedPaths: [] // Array to permanently store completed lines: { pIdx, points, color, result }
+    };
+    let isLadderRunning = false;
+
+    const defaultAnimals = ["🐰 토끼", "🐱 고양이", "🐶 강아지", "🦊 여우", "🐻 아기곰", "🐼 판다"];
+    const defaultPrizes = ["통과!", "아이스크림 쏘기 🍦", "교실 청소🧹", "매점 젤리 사기", "꽝!"];
+
+    function shuffleLadder() {
+        if (isLadderRunning) return;
+        sound.playCoin();
+
+        const count = parseInt(document.getElementById('ladder-player-count').value);
+
+        // 1. Shuffle prize inputs randomly
+        let currentPrizes = [];
+        for (let i = 0; i < count; i++) {
+            const prizeVal = document.getElementById(`ladder-prize-${i}`).value.trim();
+            currentPrizes.push(prizeVal || `벌칙 ${i+1}`);
+        }
+        for (let i = currentPrizes.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [currentPrizes[i], currentPrizes[j]] = [currentPrizes[j], currentPrizes[i]];
+        }
+        for (let i = 0; i < count; i++) {
+            document.getElementById(`ladder-prize-${i}`).value = currentPrizes[i];
+        }
+
+        // 2. Shuffle animal names randomly
+        let currentNames = [];
+        for (let i = 0; i < count; i++) {
+            const nameVal = document.getElementById(`ladder-name-${i}`).value.trim();
+            currentNames.push(nameVal || `동물 ${i+1}`);
+        }
+        for (let i = currentNames.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [currentNames[i], currentNames[j]] = [currentNames[j], currentNames[i]];
+        }
+        for (let i = 0; i < count; i++) {
+            document.getElementById(`ladder-name-${i}`).value = currentNames[i];
+        }
+
+        // 3. Clear existing paths and regenerate structure
+        ladderData.tracedPaths = [];
+        generateLadderStructure();
+        drawLadderStatic();
+        updateLadderControllers();
+
+        document.getElementById('ladder-status').innerText = "사다리 경로와 동물의 위치, 벌칙들이 마법처럼 섞였습니다! 🎲✨";
+    }
+
+    function setupLadder() {
+        const count = parseInt(document.getElementById('ladder-player-count').value);
+        const inputsEl = document.getElementById('ladder-inputs');
+        inputsEl.innerHTML = '';
+
+        for (let i = 0; i < count; i++) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'flex items-center gap-2';
+            
+            const nameInput = document.createElement('input');
+            nameInput.type = 'text';
+            nameInput.value = defaultAnimals[i % defaultAnimals.length];
+            nameInput.className = 'border border-slate-200 px-3 py-1.5 rounded-xl w-1/2 text-xs font-semibold bg-white shadow-soft-sm focus:outline-none';
+            nameInput.placeholder = `이름 ${i+1}`;
+            nameInput.id = `ladder-name-${i}`;
+
+            const prizeInput = document.createElement('input');
+            prizeInput.type = 'text';
+            prizeInput.value = defaultPrizes[i % defaultPrizes.length];
+            prizeInput.className = 'border border-slate-200 px-3 py-1.5 rounded-xl w-1/2 text-xs font-semibold bg-white shadow-soft-sm focus:outline-none';
+            prizeInput.placeholder = `벌칙 ${i+1}`;
+            prizeInput.id = `ladder-prize-${i}`;
+
+            wrapper.appendChild(nameInput);
+            wrapper.appendChild(prizeInput);
+            inputsEl.appendChild(wrapper);
+        }
+
+        ladderData.tracedPaths = [];
+        generateLadderStructure();
+        drawLadderStatic();
+        updateLadderControllers();
+        document.getElementById('ladder-status').innerText = "원하는 동물의 출발 버튼을 눌러보세요!";
+    }
+
+    function generateLadderStructure() {
+        const count = parseInt(document.getElementById('ladder-player-count').value);
+        ladderData.players = [];
+        ladderData.prizes = [];
+        ladderData.lines = [];
+
+        for (let i = 0; i < count; i++) {
+            ladderData.players.push(document.getElementById(`ladder-name-${i}`).value || `동물${i+1}`);
+            ladderData.prizes.push(document.getElementById(`ladder-prize-${i}`).value || `선물${i+1}`);
+        }
+
+        const heightSegments = 8;
+        for (let h = 1; h < heightSegments; h++) {
+            for (let p = 0; p < count - 1; p++) {
+                if (Math.random() > 0.4) {
+                    if (ladderData.lines.some(l => l.y === h && (l.x === p - 1 || l.x === p))) continue;
+                    ladderData.lines.push({ x: p, y: h });
+                }
+            }
+        }
+    }
+
+    function drawLadderStatic() {
+        const canvas = document.getElementById('ladder-canvas');
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const count = ladderData.players.length;
+        const padding = 50;
+        const colWidth = (canvas.width - padding * 2) / (count - 1 || 1);
+
+        // 1. Draw vertical poles
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = '#E2E8F0';
+        ctx.lineCap = 'round';
+
+        for (let i = 0; i < count; i++) {
+            const x = padding + i * colWidth;
+            ctx.beginPath();
+            ctx.moveTo(x, 40);
+            ctx.lineTo(x, canvas.height - 40);
+            ctx.stroke();
+
+            // Label text styling (Highly readable with proper sizing)
+            ctx.fillStyle = '#475569';
+            ctx.font = 'bold 14px Gowun Dodum';
+            ctx.textAlign = 'center';
+            ctx.fillText(ladderData.players[i], x, 25);
+
+            ctx.fillStyle = '#64748B'; 
+            ctx.font = 'bold 12px Gowun Dodum';
+            ctx.fillText(ladderData.prizes[i], x, canvas.height - 15);
+        }
+
+        // 2. Draw permanently stored paths of already run players
+        if (ladderData.tracedPaths) {
+            ladderData.tracedPaths.forEach(tp => {
+                ctx.strokeStyle = tp.color;
+                ctx.lineWidth = 5;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                tp.points.forEach((pt, idx) => {
+                    if (idx === 0) ctx.moveTo(pt.x, pt.y);
+                    else ctx.lineTo(pt.x, pt.y);
+                });
+                ctx.stroke();
+            });
+        }
+
+        // 3. Draw horizontal connecting bridges
+        const segHeight = (canvas.height - 80) / 8;
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#CBD5E1';
+        
+        ladderData.lines.forEach(line => {
+            const x1 = padding + line.x * colWidth;
+            const x2 = x1 + colWidth;
+            const y = 40 + line.y * segHeight;
+
+            ctx.beginPath();
+            ctx.moveTo(x1, y);
+            ctx.lineTo(x2, y);
+            ctx.stroke();
+        });
+    }
+
+    function updateLadderControllers() {
+        const container = document.getElementById('ladder-controllers');
+        container.innerHTML = '';
+        
+        const count = ladderData.players.length;
+        const colors = [
+            "bg-pink-50 hover:bg-pink-100 text-pink-600 border-pink-100", 
+            "bg-sky-50 hover:bg-sky-100 text-sky-600 border-sky-100", 
+            "bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border-emerald-100", 
+            "bg-amber-50 hover:bg-amber-100 text-amber-600 border-amber-100", 
+            "bg-purple-50 hover:bg-purple-100 text-purple-600 border-purple-100"
+        ];
+
+        for (let i = 0; i < count; i++) {
+            const completed = ladderData.tracedPaths.find(tp => tp.pIdx === i);
+            const btn = document.createElement('button');
+
+            if (completed) {
+                btn.className = 'w-full text-left py-2 px-3 rounded-xl font-bold text-xs border bg-slate-100 text-slate-400 border-slate-200 flex justify-between items-center cursor-default select-none';
+                btn.innerHTML = `
+                    <span>${ladderData.players[i]} (종료)</span>
+                    <span class="bg-white px-2 py-0.5 rounded-lg text-slate-600 shadow-soft-sm text-[10px] border border-slate-200/50">결과: ${completed.result}</span>
+                `;
+            } else {
+                const colorClass = colors[i % colors.length];
+                btn.className = `w-full text-left py-2 px-3 rounded-xl font-bold text-xs border ${colorClass} flex justify-between items-center shadow-soft-sm pastel-btn`;
+                btn.innerHTML = `
+                    <span>${ladderData.players[i]} 출발!</span>
+                    <i class="fa-solid fa-play text-[9px]"></i>
+                `;
+                btn.onclick = () => runSinglePlayer(i);
+            }
+            container.appendChild(btn);
+        }
+    }
+
+    function resetLadderRuns() {
+        if (isLadderRunning) return;
+        sound.playClick();
+        ladderData.tracedPaths = [];
+        drawLadderStatic();
+        updateLadderControllers();
+        document.getElementById('ladder-status').innerText = "기록이 리셋되었습니다! 사다리를 다시 타보세요. 🐾";
+    }
+
+    async function runSinglePlayer(pIdx) {
+        if (isLadderRunning) return;
+        // Verify duplicate check
+        if (ladderData.tracedPaths.some(tp => tp.pIdx === pIdx)) return;
+
+        isLadderRunning = true;
+        sound.playCoin();
+
+        const canvas = document.getElementById('ladder-canvas');
+        const ctx = canvas.getContext('2d');
+        const count = ladderData.players.length;
+        const padding = 50;
+        const colWidth = (canvas.width - padding * 2) / (count - 1 || 1);
+        const segHeight = (canvas.height - 80) / 8;
+
+        document.getElementById('ladder-status').innerText = `${ladderData.players[pIdx]} 친구가 영차영차 내려갑니다! 🐾`;
+
+        let cx = pIdx;
+        const colors = ["#F472B6", "#60A5FA", "#34D399", "#FBBF24", "#A78BFA"];
+        const myColor = colors[pIdx % colors.length];
+
+        let prevXPos = padding + cx * colWidth;
+        let prevYPos = 40;
+
+        // Cumulative path points
+        let currentPoints = [{ x: prevXPos, y: prevYPos }];
+
+        for (let h = 1; h <= 8; h++) {
+            let rightBridge = ladderData.lines.find(l => l.y === h && l.x === cx);
+            let leftBridge = ladderData.lines.find(l => l.y === h && l.x === cx - 1);
+
+            let midY = 40 + h * segHeight;
+
+            // 1. Move Downwards
+            drawLadderStatic(); // draw poles, lines and previous paths first
+            
+            // Draw current path in real time
+            ctx.strokeStyle = myColor;
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            currentPoints.forEach((pt, idx) => {
+                if (idx === 0) ctx.moveTo(pt.x, pt.y);
+                else ctx.lineTo(pt.x, pt.y);
+            });
+            ctx.lineTo(prevXPos, midY);
+            ctx.stroke();
+
+            prevYPos = midY;
+            currentPoints.push({ x: prevXPos, y: prevYPos });
+            sound.playTone(300 + h * 35, 'sine', 0.05, 0.05);
+            await new Promise(r => setTimeout(r, 120));
+
+            // 2. Cross horizontal bridge if exists
+            if (rightBridge) {
+                let nextXPos = padding + (cx + 1) * colWidth;
+                drawLadderStatic();
+
+                ctx.strokeStyle = myColor;
+                ctx.lineWidth = 5;
+                ctx.beginPath();
+                currentPoints.forEach((pt, idx) => {
+                    if (idx === 0) ctx.moveTo(pt.x, pt.y);
+                    else ctx.lineTo(pt.x, pt.y);
+                });
+                ctx.lineTo(nextXPos, prevYPos);
+                ctx.stroke();
+
+                cx++;
+                prevXPos = nextXPos;
+                currentPoints.push({ x: prevXPos, y: prevYPos });
+                sound.playTone(450, 'sine', 0.04, 0.05);
+                await new Promise(r => setTimeout(r, 120));
+            } else if (leftBridge) {
+                let nextXPos = padding + (cx - 1) * colWidth;
+                drawLadderStatic();
+
+                ctx.strokeStyle = myColor;
+                ctx.lineWidth = 5;
+                ctx.beginPath();
+                currentPoints.forEach((pt, idx) => {
+                    if (idx === 0) ctx.moveTo(pt.x, pt.y);
+                    else ctx.lineTo(pt.x, pt.y);
+                });
+                ctx.lineTo(nextXPos, prevYPos);
+                ctx.stroke();
+
+                cx--;
+                prevXPos = nextXPos;
+                currentPoints.push({ x: prevXPos, y: prevYPos });
+                sound.playTone(450, 'sine', 0.04, 0.05);
+                await new Promise(r => setTimeout(r, 120));
+            }
+        }
+
+        // 3. Move to final bottom line
+        drawLadderStatic();
+        ctx.strokeStyle = myColor;
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        currentPoints.forEach((pt, idx) => {
+            if (idx === 0) ctx.moveTo(pt.x, pt.y);
+            else ctx.lineTo(pt.x, pt.y);
+        });
+        ctx.lineTo(prevXPos, canvas.height - 40);
+        ctx.stroke();
+        currentPoints.push({ x: prevXPos, y: canvas.height - 40 });
+
+        // Save this path permanently to tracedPaths
+        ladderData.tracedPaths.push({
+            pIdx: pIdx,
+            points: currentPoints,
+            color: myColor,
+            result: ladderData.prizes[cx]
+        });
+
+        sound.playWin();
+        confetti({ particleCount: 15, spread: 30 });
+
+        // Redraw and update controls UI
+        drawLadderStatic();
+        updateLadderControllers();
+
+        document.getElementById('ladder-status').innerText = `${ladderData.players[pIdx]} 도착 완료! 🏆`;
+        showModal(`${ladderData.players[pIdx]}의 사다리 결과!`, `보상 및 미션: ${ladderData.prizes[cx]}`, "🐾");
+        isLadderRunning = false;
+    }
+</script>
+
+<script>
+    let playerBoard = [];
+    let aiBoard = [];
+    let bingoEmojis = ["🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐨", "🐯", "🦁", "🐮", "🐷", "🐸", "🐵", "🐔", "🐧", "🐦", "🐤", "🦆", "🦅", "🦉", "🐺", "🐗", "🦄"];
+    let selectedSet = [];
+    let currentSelectedEmojis = [];
+    let bingoGameOver = false;
+
+    function startBingoGame() {
+        sound.playCoin();
+        bingoGameOver = false;
+        currentSelectedEmojis = [];
+        
+        const shuffled = [...bingoEmojis].sort(() => 0.5 - Math.random());
+        selectedSet = shuffled.slice(0, 25);
+
+        playerBoard = selectedSet.map((emoji, idx) => ({
+            id: idx,
+            emoji: emoji,
+            stamped: false
+        }));
+
+        aiBoard = [...selectedSet].sort(() => 0.5 - Math.random()).map((emoji, idx) => ({
+            id: idx,
+            emoji: emoji,
+            stamped: false
+        }));
+
+        renderBingoDOMs();
+        updateBingoStats();
+        document.getElementById('ai-status').innerText = "안녕! 내가 선공이다쿵! 동물을 선택해봐!";
+    }
+
+    function renderBingoDOMs() {
+        const boardEl = document.getElementById('player-bingo-board');
+        boardEl.innerHTML = '';
+
+        playerBoard.forEach((cell, idx) => {
+            const tile = document.createElement('button');
+            tile.className = 'pastel-btn bg-slate-50/50 hover:bg-white h-16 rounded-xl flex items-center justify-center text-3xl relative transition-all border border-slate-200/50 shadow-soft-sm select-none';
+            tile.innerHTML = cell.emoji;
+            tile.onclick = () => selectBingoEmoji(cell.emoji);
+            
+            if (cell.stamped) {
+                tile.className += ' bg-pink-100/50 border-pink-200';
+                tile.innerHTML += '<span class="absolute text-xs top-1 right-1 animate-pulse">💖</span>';
+            }
+            boardEl.appendChild(tile);
+        });
+    }
+
+    function selectBingoEmoji(emoji) {
+        if (bingoGameOver) return;
+        if (currentSelectedEmojis.includes(emoji)) return;
+
+        sound.playTone(523.25, 'sine', 0.1, 0.05); // clean standard C5
+        currentSelectedEmojis.push(emoji);
+
+        const pCell = playerBoard.find(c => c.emoji === emoji);
+        if (pCell) pCell.stamped = true;
+
+        const aiCell = aiBoard.find(c => c.emoji === emoji);
+        if (aiCell) aiCell.stamped = true;
+
+        renderBingoDOMs();
+        updateBingoStats();
+
+        if (checkBingoLines(playerBoard) >= 5) {
+            triggerBingoVictory("player");
+            return;
+        }
+
+        bingoGameOver = true; 
+        document.getElementById('ai-status').innerText = "로보몽이 두뇌를 회전하고 있어요...🤖";
+        
+        setTimeout(() => {
+            if (bingoGameOver && checkBingoLines(playerBoard) >= 5) return; 
+            aiTurn();
+        }, 1000);
+    }
+
+    function aiTurn() {
+        bingoGameOver = false;
+        const unselected = selectedSet.filter(e => !currentSelectedEmojis.includes(e));
+        if (unselected.length === 0) return;
+
+        let chosenEmoji = unselected[Math.floor(Math.random() * unselected.length)];
+        
+        sound.playTone(440, 'sine', 0.1, 0.05);
+        currentSelectedEmojis.push(chosenEmoji);
+
+        const pCell = playerBoard.find(c => c.emoji === chosenEmoji);
+        if (pCell) pCell.stamped = true;
+
+        const aiCell = aiBoard.find(c => c.emoji === chosenEmoji);
+        if (aiCell) aiCell.stamped = true;
+
+        document.getElementById('ai-status').innerText = `로보몽이 [ ${chosenEmoji} ]를 채웠다쿵!`;
+
+        renderBingoDOMs();
+        updateBingoStats();
+
+        if (checkBingoLines(aiBoard) >= 5) {
+            triggerBingoVictory("ai");
+        }
+    }
+
+    function checkBingoLines(board) {
+        if (!board || board.length < 25) return 0;
+        let lines = 0;
+        let matrix = [];
+        for (let i = 0; i < 5; i++) {
+            matrix.push(board.slice(i * 5, i * 5 + 5));
+        }
+
+        // Rows
+        for (let r = 0; r < 5; r++) {
+            if (matrix[r].every(cell => cell.stamped)) lines++;
+        }
+        // Columns
+        for (let c = 0; c < 5; c++) {
+            let colChecked = true;
+            for (let r = 0; r < 5; r++) {
+                if (!matrix[r][c].stamped) colChecked = false;
+            }
+            if (colChecked) lines++;
+        }
+        // Diagonals
+        if (matrix[0][0].stamped && matrix[1][1].stamped && matrix[2][2].stamped && matrix[3][3].stamped && matrix[4][4].stamped) lines++;
+        if (matrix[0][4].stamped && matrix[1][3].stamped && matrix[2][2].stamped && matrix[3][1].stamped && matrix[4][0].stamped) lines++;
+
+        return lines;
+    }
+
+    function updateBingoStats() {
+        const pLines = checkBingoLines(playerBoard);
+        const aiLines = checkBingoLines(aiBoard);
+
+        document.getElementById('player-lines').innerHTML = `완성: <b class="text-pink-600 text-lg">${pLines}</b> 줄 / 5줄`;
+        document.getElementById('ai-lines').innerText = `${aiLines} 줄`;
+    }
+
+    function claimBingo() {
+        const pLines = checkBingoLines(playerBoard);
+        if (pLines >= 5) {
+            triggerBingoVictory("player");
+        } else {
+            sound.playLose();
+            showModal("아직 부족해요!", `현재 성공한 줄은 ${pLines}줄입니다. 5줄을 마저 완성해 보아요! ⭐`, "❌");
+        }
+    }
+
+    function triggerBingoVictory(winner) {
+        bingoGameOver = true;
+        if (winner === 'player') {
+            sound.playWin();
+            confetti({
+                particleCount: 100,
+                spread: 70
+            });
+            showModal("빙고 대성공! 🏆", "컴퓨터 로보몽을 멋지게 이겼어요! 훌륭합니다!", "🦁");
+        } else {
+            sound.playLose();
+            showModal("아쉬운 경기! 🤖", "로보몽이 조금 더 빠르게 5줄을 채웠네요! 한 번 더 도전해 볼까요?", "🥺");
+        }
+    }
+</script>
+
+<script>
+    let rouletteItems = ["아이스크림 🍨", "달콤한 푸딩 🍮", "딱 한판만 더! 🎮", "숙제 패스권 📝", "노래방 한곡 🎤", "오늘 행운 통과 ✨"];
+    // Highly sophisticated soft pastel palette for roulette slices
+    const wheelColors = ["#FFD1DC", "#FFDFBA", "#FFF9A6", "#C1FFC1", "#BAE1FF", "#D5AAFF"];
+    let isSpinning = false;
+
+    function renderRoulette() {
+        renderRouletteList();
+        drawWheel();
+    }
+
+    function renderRouletteList() {
+        const listEl = document.getElementById('roulette-items-list');
+        listEl.innerHTML = '';
+        
+        rouletteItems.forEach((item, idx) => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'flex items-center justify-between border-b border-slate-50 py-1.5 text-xs font-semibold text-slate-600';
+            itemDiv.innerHTML = `
+                <span>${idx + 1}. ${item}</span>
+                <button onclick="removeRouletteItem(${idx})" class="text-slate-400 hover:text-rose-500 font-bold px-2">삭제</button>
+            `;
+            listEl.appendChild(itemDiv);
+        });
+    }
+
+    function drawWheel() {
+        const canvas = document.getElementById('roulette-canvas');
+        const ctx = canvas.getContext('2d');
+        const count = rouletteItems.length;
+        const cx = canvas.width / 2;
+        const cy = canvas.height / 2;
+        const radius = canvas.width / 2 - 8;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (count === 0) {
+            ctx.fillStyle = '#94A3B8';
+            ctx.font = 'bold 13px Gowun Dodum';
+            ctx.textAlign = 'center';
+            ctx.fillText('항목을 하나 이상 적어주세요!', cx, cy);
+            return;
+        }
+
+        const arcSize = (2 * Math.PI) / count;
+
+        for (let i = 0; i < count; i++) {
+            const startAngle = i * arcSize;
+            const endAngle = startAngle + arcSize;
+
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.arc(cx, cy, radius, startAngle, endAngle);
+            ctx.fillStyle = wheelColors[i % wheelColors.length];
+            ctx.fill();
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.stroke();
+
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(startAngle + arcSize / 2);
+            ctx.fillStyle = '#475569';
+            ctx.font = 'bold 12px Gowun Dodum';
+            ctx.textAlign = 'right';
+            ctx.fillText(rouletteItems[i], radius - 15, 4);
+            ctx.restore();
+        }
+    }
+
+    function addRouletteItem() {
+        sound.playClick();
+        const input = document.getElementById('roulette-new-item');
+        const text = input.value.trim();
+        if (text) {
+            rouletteItems.push(text);
+            input.value = '';
+            renderRoulette();
+        }
+    }
+
+    function removeRouletteItem(idx) {
+        sound.playClick();
+        if (rouletteItems.length <= 2) {
+            showModal("삭제 불가!", "선택지는 최소 2개 이상 있어야 안정적으로 돌아가요!", "⚠️");
+            return;
+        }
+        rouletteItems.splice(idx, 1);
+        renderRoulette();
+    }
+
+    function spinRoulette() {
+        if (isSpinning) return;
+        if (rouletteItems.length === 0) return;
+        
+        isSpinning = true;
+        sound.playCoin();
+
+        const wheel = document.getElementById('roulette-wheel');
+        const spins = 5 + Math.floor(Math.random() * 5); 
+        const degrees = spins * 360 + Math.floor(Math.random() * 360);
+        
+        wheel.style.transform = `rotate(${degrees}deg)`;
+
+        // Clean sound rhythm simulating physical clicks
+        for (let i = 1; i < 28; i++) {
+            setTimeout(() => {
+                if (isSpinning) sound.playTone(500 - i * 6, 'sine', 0.04, 0.05);
+            }, i * i * 5);
+        }
+
+        setTimeout(() => {
+            isSpinning = false;
+            sound.playWin();
+
+            const actualDeg = degrees % 360;
+            const count = rouletteItems.length;
+            const segmentSize = 360 / count;
+
+            let idx = Math.floor((360 - actualDeg + 270) % 360 / segmentSize);
+            const winner = rouletteItems[idx];
+
+            confetti({
+                particleCount: 50,
+                spread: 50
+            });
+
+            showModal("룰렛 결과 발표! 🎯", `축하합니다! 당첨된 결과는: ${winner}`, "✨");
+        }, 4000);
+    }
+</script>
+
+<script>
+    // Entry Point Setup
+    window.onload = function() {
+        showScreen('home');
+        console.log("Cozy Pastel Arcade Platform Launched Successfully!");
+    }
+</script>
+
+</body>
+</html>
